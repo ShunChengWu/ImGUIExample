@@ -162,6 +162,7 @@ void GUI_base::key_callback_impl(GLFWwindow* window, int key, int scancode, int 
         glfwSetWindowShouldClose(window, true);
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    GL_FRAGMENT_SHADER;
 }
 
 void GUI_base::framebuffer_size_callback_impl(GLFWwindow* window, int width, int height){

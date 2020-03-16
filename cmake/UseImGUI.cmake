@@ -2,18 +2,19 @@
 # Use ImGUI as an external project
 #
 ###
-
-find_package(Git)
-include(FindPythonInterp)
-
 SET(NAME ImGUI)
 SET(URL "https://github.com/ocornut/imgui.git")
 SET(${NAME}_INSTALL_DIR  ${CMAKE_BINARY_DIR}/external/${NAME})
-file(MAKE_DIRECTORY ${${NAME}_INSTALL_DIR})
-execute_process(
-        COMMAND ${GIT_EXECUTABLE} clone ${URL} ${NAME}
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external
-)
+IF(NOT imgui_DOWNLOADED)
+    find_package(Git)
+    include(FindPythonInterp)
+    file(MAKE_DIRECTORY ${${NAME}_INSTALL_DIR})
+    execute_process(
+            COMMAND ${GIT_EXECUTABLE} clone ${URL} ${NAME}
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external
+    )
+    SET(imgui_DOWNLOADED 1 CACHE STRING "Set to 1 if imgui is found, 0 otherwise")
+ENDIF()
 
 SET(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
@@ -21,7 +22,6 @@ FIND_PACKAGE(gl3w REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package( Threads REQUIRED)
 
-MESSAGE("gl3w_source: " ${gl3w_SOURCE})
 add_library(imgui STATIC
     ${gl3w_SOURCE}
     ${ImGUI_INSTALL_DIR}/imgui.cpp
@@ -39,7 +39,7 @@ target_link_libraries(imgui
         ${CMAKE_THREAD_LIBS_INIT}
 )
 target_include_directories(imgui
-        PUBLIC ${gl3w_INCLUDE}
+        PUBLIC ${gl3w_INCLUDE_DIRS}
         PUBLIC ${ImGUI_INSTALL_DIR}
         PUBLIC ${ImGUI_INSTALL_DIR}/examples
 )
