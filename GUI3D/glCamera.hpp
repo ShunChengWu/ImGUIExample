@@ -1,186 +1,67 @@
-#ifndef CAMERA_H
-#define CAMERA_H
-
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include <vector>
+#pragma once
+#include "camera_control.h"
+#include "projection_control.hpp"
+#include <memory>
 
 namespace glUtil{
-    // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
-    enum Camera_Movement {
-        UP,
-        DOWN,
-        FORWARD,
-        BACKWARD,
-        LEFT,
-        RIGHT
-    };
-    
-    // Default camera values
-    const float YAW         = -90.0f;
-    const float PITCH       =  0.0f;
-    const float SPEED       =  2.5f;
-    const float SENSITIVITY =  0.1f;
-    const float ZOOM        =  45.0f;
-    const float ZOOM_MAX    =  90.0f;
-    
     // An abstract camera class that processes input and calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
     class Camera
     {
     public:
-        // Camera Attributes
-        glm::vec3 Position;
-        glm::vec3 Front;
-        glm::vec3 Up;
-        glm::vec3 Right;
-        glm::vec3 WorldUp;
-        // Euler Angles
-        float Row;
-        float Yaw;
-        float Pitch;
-        // Camera options
-        float MovementSpeed;
-        float MouseSensitivity;
-        float Zoom;
-        float ZoomMax;
-        
-        // Constructor with vectors
-        Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
+        explicit Camera(int windowWidth, int windowHeight, glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
                glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
-               float yaw = YAW,
-               float pitch = PITCH) :
-        Position(position), WorldUp(up), Yaw(yaw),
-        MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM), ZoomMax(ZOOM_MAX)
-        {
-            updateCameraVectors();
-        }
-        // Constructor with scalar values
-        Camera(float posX, float posY, float posZ,
-               float upX, float upY, float upZ, float yaw, float pitch) :
-        Position(glm::vec3(posX, posY, posZ)),
-        WorldUp(glm::vec3(upX, upY, upZ)),
-        Yaw(yaw),
-        Pitch(pitch),
-        MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
-        {
-            updateCameraVectors();
-        }
-        
-        // Returns the view matrix calculated using Euler Angles and the LookAt Matrix
-        glm::mat4 GetViewMatrix()
-        {
-            return glm::lookAt(Position, Position + Front, Up);
+               float yaw = -90.0f,
+               float pitch = 0){
+            bShowUI=false;
+            camera_control_.reset(new SC::CameraControl(position,up,yaw,pitch));
+            projection_control_.reset(new SC::ProjectionControl(windowWidth,windowHeight));
         }
 
-        void setCamPose(float row, float yaw, float pitch, float x, float y, float z){
-            Row = row;
-            Pitch = pitch;
-            Yaw = yaw;
-
-            Position.x = x;
-            Position.y = y;
-            Position.z = z;
-//            printf("Row,Yaw,Pitch,x,y,z: %f %f %f %f %f %f\n", Row, Yaw, Pitch, Position.x, Position.y, Position.z);
-            updateCameraVectors();
+        void setSize(int windowWidth, int windowHeight){
+            projection_control_->setSize(windowWidth,windowHeight);
         }
 
-        void setPosition(float x, float y, float z){
-            Position.x = x;
-            Position.y = y;
-            Position.z = z;
-        }
+        void mouse_control() {
+            ImGuiIO& io = ImGui::GetIO();
+            auto mouse_pos = ImGui::GetMousePos();
+            auto drag_delta = ImGui::GetMouseDragDelta();
 
+            glm::vec2 p(mouse_pos.x, mouse_pos.y);
 
+            for (int i = 0; i < 3; i++) {
+                if (ImGui::IsMouseClicked(i)) {
+                    camera_control_->mouse(p, i, true);
+                }
+                if (ImGui::IsMouseReleased(i)) {
+                    camera_control_->mouse(p, i, false);
+                }
+                if (ImGui::IsMouseDragging(i)) {
+                    camera_control_->drag(p, i);
+                }
 
-        
-        // Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-        void ProcessKeyboard(Camera_Movement direction, float deltaTime)
-        {
-            //printf("MovingSpeed: %f\n", MovementSpeed);
-            float velocity = MovementSpeed * deltaTime;
-            if (direction == UP)
-                Position -= Up * velocity;
-            if (direction == DOWN)
-                Position += Up * velocity;
-            if (direction == FORWARD)
-                Position -= Front * velocity;
-            if (direction == BACKWARD)
-                Position += Front * velocity;
-            if (direction == LEFT)
-                Position -= Right * velocity;
-            if (direction == RIGHT)
-                Position += Right * velocity;
-        }
-        
-        // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-        void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
-        {
-            xoffset *= MouseSensitivity;
-            yoffset *= MouseSensitivity;
-            
-            Yaw   += xoffset;
-            Pitch += yoffset;
-            
-            // Make sure that when pitch is out of bounds, screen doesn't get flipped
-            if (constrainPitch)
-            {
-                if (Pitch > 89.0f)
-                    Pitch = 89.0f;
-                if (Pitch < -89.0f)
-                    Pitch = -89.0f;
+                camera_control_->scroll(glm::vec2(io.MouseWheel, io.MouseWheelH));
             }
-            
-            // Update Front, Right and Up Vectors using the updated Euler angles
-            updateCameraVectors();
-        }
-        
-        // Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-        void ProcessMouseScroll(float yoffset, float deltaTime)
-        {
-            float velocity = MovementSpeed * deltaTime;
-            Position -= Up * yoffset * velocity;
-        }
-        
-        void ProcessMouseScroll(float yoffset)
-        {
-            if (Zoom >= 1.0f && Zoom <= ZoomMax)
-                Zoom -= yoffset;
-            if (Zoom <= 1.0f)
-                Zoom = 1.0f;
-            if (Zoom >= ZoomMax)
-                Zoom = ZoomMax;
-        }
-        
-        void setMovingSpeed(float value)
-        {
-            MovementSpeed = value;
         }
 
-        void setFov(float fov)
-        {
-            Zoom = fov;
+        void drawUI(){
+            bShowUI=true;
+            ImGui::Begin("GL Camera", &bShowUI);
+            if(ImGui::BeginMenu("Camera", bShowUI)){
+                ImGui::MenuItem("Projection Control", NULL, &projection_control_->bShowUI);
+                ImGui::MenuItem("Camera Control", NULL, &camera_control_->bShowUI);
+                ImGui::EndMenu();
+            }
+            ImGui::End();
+            projection_control_->draw_ui();
+            camera_control_->drawUI();
         }
+
+        std::unique_ptr<SC::CameraControlBase> camera_control_;
+        std::unique_ptr<SC::ProjectionControl> projection_control_;
+
+        bool bShowUI;
     private:
-        // Calculates the front vector from the Camera's (updated) Euler Angles
-        void updateCameraVectors()
-        {
-            // Calculate the new Front vector
-            glm::vec3 front;
-            front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-            front.y = sin(glm::radians(Pitch));
-            front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
-            Front = glm::normalize(front);
-            // Also re-calculate the Right and Up vector
-            Right = glm::normalize(glm::cross(Front, WorldUp));  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-            Up    = glm::normalize(glm::cross(Right, Front));
-            
-//            printf("F= %6.4f %6.4f %6.4f \nR= %6.4f %6.4f %6.4f\nU: %6.4f %6.4f %6.4f\n",Front.x, Front.y, Front.z, Right.x, Right.y, Right.z, Up.x, Up.y, Up.z);
-//            printf("Row: %6.4f, Yaw: %6.4f\tPitch: %6.4f\n", Row, Yaw, Pitch);
-        }
+
     };
     
 } // end of namespace glUtil
-#endif
-

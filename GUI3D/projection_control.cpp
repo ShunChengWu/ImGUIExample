@@ -7,24 +7,23 @@
 #include <glm/gtc/matrix_transform.hpp>
 using namespace SC;
 
-ProjectionControl::ProjectionControl(unsigned int windowWidth, unsigned int windowHeight, glUtil::Camera *camera)
-: show_window(false),
+ProjectionControl::ProjectionControl(unsigned int windowWidth, unsigned int windowHeight)
+: bShowUI(false),
 width_(windowWidth),height_(windowHeight),
-camera_(camera),
 projection_mode(0),
-fovy(30.0f),
+fovy(45.0f),
 width(10.0f),
 near(0.001f),
 far(1000.0f)
 {}
 
-ProjectionControl::~ProjectionControl() {}
+ProjectionControl::~ProjectionControl() = default;
 
 glm::mat4 ProjectionControl::projection_matrix() const {
-    double aspect_ratio = width_/float(height_);
+    double aspect_ratio = float(width_)/float(height_);
     glm::mat4 proj;
     if(projection_mode == 0) {
-        proj = glm::perspective<float>(glm::radians(camera_->Zoom),
+        proj = glm::perspective<float>(glm::radians(fovy),
                                        (float) width_ /
                                        (float) height_, near, far);
     } else {
@@ -35,15 +34,15 @@ glm::mat4 ProjectionControl::projection_matrix() const {
 }
 
 void ProjectionControl::show() {
-  show_window = true;
+    bShowUI = true;
 }
 
 void ProjectionControl::draw_ui() {
-  if(!show_window) {
+  if(!bShowUI) {
     return;
   }
 
-  ImGui::Begin("projection control", &show_window, ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::Begin("projection control", &bShowUI, ImGuiWindowFlags_AlwaysAutoResize);
   const char* modes[] = { "PERSPECTIVE", "ORTHOGONAL" };
   ImGui::Combo("Mode", &projection_mode, modes, IM_ARRAYSIZE(modes));
   if(projection_mode == 0){

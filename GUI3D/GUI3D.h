@@ -6,6 +6,7 @@
 #include "glMesh.hpp"
 #include "glUtils.hpp"
 #include <map>
+#include "camera_control.h"
 
 #include <ft2build.h>
 #include <memory>
@@ -121,9 +122,7 @@ namespace SC{
         FPSManager *fps_;
         bool bShowGrid, bShowFPS;
         bool bPlotTrajectory;
-        enum {
-            mouse_None, mouse_Translation, mouse_Rotation, mouse_Zoom
-        } mouseMode_;
+
         struct task_element_t {
             GLFWWindowContainer* window_;
             int key_;
@@ -141,9 +140,10 @@ namespace SC{
         virtual void basicProcess();
         virtual void plot_trajectory(const glm::mat4 *projection);
         virtual void add_trajectory(float x, float y, float z, float interval = 0.002);
+        void mouseControl();
 
-        virtual void scroll_callback_impl(GLFWwindow* window, double xoffset, double yoffset);
-        virtual void mouse_callback_impl(GLFWwindow *window, double xpos, double ypos);
+//        virtual void scroll_callback_impl(GLFWwindow* window, double xoffset, double yoffset);
+//        virtual void mouse_callback_impl(GLFWwindow *window, double xpos, double ypos);
 
         void buildScreen();
         void buildCamera();
@@ -154,11 +154,7 @@ namespace SC{
         bool bShowCameraUI;
         void cameraUI();
 
-        std::unique_ptr<glUtil::Camera> camera_control;
-        std::unique_ptr<ProjectionControl> projection_control;
-        bool bMouseInit, bMousePressedRight;
-        float mouseXpre, mouseYpre;
-        double deltaFrameTime, lastFrameTime, currentFrameTime;
+        std::unique_ptr<glUtil::Camera> glCam;
         glm::vec3 camPose, camUp;
         float yaw, pitch, fov, fovMax, camSpeed;
     private:

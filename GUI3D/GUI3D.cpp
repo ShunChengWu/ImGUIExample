@@ -1,11 +1,8 @@
 #include "GUI3D.h"
 using namespace SC;
 
-GUI3D::GUI3D(const std::string &name, int width, int height): bMouseInit(false),bMousePressedRight(false){
+GUI3D::GUI3D(const std::string &name, int width, int height){
     GUI_base::initWindow(name,width,height);
-    mouseMode_ = mouse_None;
-//    window_->nearPlane=0;
-//    window_->farPlane=1e3;
     fps_ = new FPSManager();
     bShowFPS = bShowGrid = false;
     bPlotTrajectory = true;
@@ -15,7 +12,7 @@ GUI3D::GUI3D(const std::string &name, int width, int height): bMouseInit(false),
     camUp = glm::vec3(0.f, 1.f, 0.f);
     yaw = 90.f; // y-axis 0-180-360: +z, 90-270-450: -z
     pitch = 0.f; // z-axis
-    camera_control.reset(new glUtil::Camera(camPose, camUp, yaw, pitch));
+    glCam.reset(new glUtil::Camera(window_->width,window_->height,camPose, camUp, yaw, pitch));
     init();
 }
 GUI3D::~GUI3D(){
@@ -49,12 +46,12 @@ int GUI3D::init(){
 void GUI3D::drawUI() {
     GUI_base::drawUI();
     cameraUI();
+
+    glCam->drawUI();
+    mouseControl();
 }
 
 void GUI3D::drawGL(){
-    currentFrameTime = glfwGetTime();
-    deltaFrameTime = lastFrameTime - currentFrameTime;
-    lastFrameTime = currentFrameTime;
     processInput(window_->window);
     basicProcess();
 }
@@ -67,25 +64,6 @@ void GUI3D::processInput(GLFWwindow* window) {
         }
         if (glfwGetKey(func.window_->window, func.key_) == GLFW_RELEASE) bKeyProcessFinished[func.key_] = true;
     }
-
-#if 1
-/// Mouse
-// translation
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-        mouseMode_ = mouse_Translation;
-        return;
-    }
-
-// rotation
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
-        mouseMode_ = mouse_Rotation;
-        return;
-    }
-
-
-    mouseMode_ = mouse_None;
-    bMouseInit = false;
-#endif
 }
 
 void GUI3D::basicInputRegistration(){
@@ -317,16 +295,7 @@ void GUI3D::buildFreeType(){
 }
 
 void GUI3D::basicProcess() {
-    glm::mat4 projection = glm::perspective(glm::radians(camera_control->Zoom),
-                                            (float) window_->width /
-                                            (float) window_->height, 0.1f,100.f);
-
-    for(size_t x=0;x<4;++x){
-        for(size_t y=0;y<4;++y){
-            printf("%f ", camera_control->GetViewMatrix()[x][y]);
-        }
-        printf("\n");
-    }
+    auto projection = glCam->projection_control_->projection_matrix();
 
     /// GRID
     if (bShowGrid) {
@@ -340,7 +309,7 @@ void GUI3D::basicProcess() {
         glm::mat4 model = glm::mat4(1.f);
         //                model = glm::translate(model, glm::vec3(0, 0, 0));
         model = glm::scale(model, glm::vec3(20.f));// radius (meter)
-        shader->set("view", camera_control->GetViewMatrix());
+        shader->set("view", glCam->camera_control_->GetViewMatrix());
         shader->set("projection", projection);
         shader->set("model", model);
         shader->set("color", glm::vec4(0, 0, 0, 0.8));
@@ -370,16 +339,25 @@ void GUI3D::basicProcess() {
     }
 }
 
+
+void GUI3D::mouseControl(){
+    ImGuiIO& io = ImGui::GetIO();
+    if(!io.WantCaptureMouse) {
+        // let the main canvas handle the mouse input
+        glCam->mouse_control();
+    }
+}
+
 void GUI3D::plot_trajectory(const glm::mat4 *projection){
     const std::string name = "Trajectory";
     glUtil::Shader *shader = glShaders[name];
     glm::mat4 modelMat = glm::mat4(1.f);
     shader->use();
 //        shader->set("lightColor", lightColor);
-    shader->set("lightPos", camera_control->Position /*glm::vec3(0,2,0)*/);
+    shader->set("lightPos", glCam->camera_control_->Position /*glm::vec3(0,2,0)*/);
     shader->set("model", modelMat);
     shader->set("projection", *projection);
-    shader->set("view", camera_control->GetViewMatrix());
+    shader->set("view", glCam->camera_control_->GetViewMatrix());
 
     glBindVertexArray(glVertexArrays[name]);
     glBindBuffer(GL_ARRAY_BUFFER, glBuffers[name]);
@@ -473,66 +451,11 @@ void GUI3D::showRegisteredKeyFunction(){
         printf("window[%s], key[%d], function[%p], description[%s]\n", func.window_->name_.c_str(), func.key_, &func.no_id, func.description.c_str());
 }
 
-void GUI3D::scroll_callback_impl(GLFWwindow* window, double xoffset, double yoffset) {
-    camera_control->ProcessKeyboard(glUtil::BACKWARD, -1 * yoffset * deltaFrameTime);
-}
-
-void GUI3D::mouse_callback_impl(GLFWwindow* window, double xpos, double ypos) {
-    ImGuiIO& io = ImGui::GetIO();
-    if(io.WantCaptureMouse) return;  // prevent capturing mouse when adjusting ui
-
-    if (mouseMode_ == mouse_None) return;
-    if (!bMouseInit) {
-        mouseXpre = xpos;
-        mouseYpre = ypos;
-        bMouseInit = !bMouseInit;
-        return;
-    }
-
-    float xoffset = (xpos - mouseXpre);
-    float yoffset = (mouseYpre - ypos);
-    mouseXpre = xpos;
-    mouseYpre = ypos;
-
-    float MouseSensitivity = 1.f;
-
-    switch (mouseMode_) {
-        case mouse_None:
-            return;
-        case mouse_Translation:
-            MouseSensitivity = 0.5f;
-            break;
-        case mouse_Rotation:
-            MouseSensitivity = 1.f;
-            break;
-        case mouse_Zoom:
-            return;
-    }
-
-    xoffset *= MouseSensitivity * deltaFrameTime;
-    yoffset *= MouseSensitivity * deltaFrameTime;
-    switch (mouseMode_) {
-        case mouse_None:
-            return;
-        case mouse_Zoom:
-            return;
-        case mouse_Translation: {
-            camera_control->ProcessKeyboard(glUtil::RIGHT, xoffset);
-            camera_control->ProcessKeyboard(glUtil::UP, -yoffset);
-            break;
-        }
-        case mouse_Rotation: {
-            camera_control->ProcessMouseMovement(-xoffset * 100, -yoffset * 100);
-            break;
-        }
-    }
-}
-
 
 void GUI3D::cameraUI() {
     if(!bShowCameraUI) return;
-    ImGui::Begin("Projection control", &bShowCameraUI, ImGuiWindowFlags_AlwaysAutoResize);
+//    ImGui::Begin("Projection control", &bShowCameraUI, ImGuiWindowFlags_AlwaysAutoResize);
 //    ImGui::DragFloat("Near",camera_control->Position)
-    ImGui::DragFloat3("Position", &camera_control->Position[0]);
-    ImGui::End();
+//    ImGui::DragFloat3("Position", &camera_control->Position[0]);
+//    ImGui::End();
 }
