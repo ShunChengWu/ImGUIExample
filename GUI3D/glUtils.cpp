@@ -8,6 +8,7 @@
 #include "glUtils.hpp"
 
 namespace glUtil {
+#ifdef WITH_STB
     // loads a cubemap texture from 6 individual texture faces
     // order:
     // +X (right)
@@ -89,6 +90,14 @@ namespace glUtil {
         
         return textureID;
     }
+#else
+    unsigned int Utils::loadCubemap(const std::vector<std::string> &faces){
+        throw std::runtime_error("load cube map requires stb library!\n");
+    }
+    uint Utils::loadTexture(char const *path) {
+        throw std::runtime_error("load cube map requires stb library!\n");
+    }
+#endif
     
     void Utils::save_screen( const char *spath )
     {

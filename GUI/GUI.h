@@ -28,11 +28,11 @@ namespace SC{
     struct GLFWWindowContainer {
         GLFWwindow* window;
         int width, height;
-        int runtimeWidth, runtimeHeight;
-        float nearPlane=0.4, farPlane=500.f;
+        int runtimeWidth{}, runtimeHeight{};
+//        float nearPlane=0.4, farPlane=500.f;
         std::string name_;
         GLFWWindowContainer(std::string name, int width, int height, float nearPlane=0.4, float farPlane=500.f):
-        name_(std::move(name)), width(width),height(height), nearPlane(nearPlane),farPlane(farPlane){
+        name_(std::move(name)), width(width),height(height){
             window = glfwCreateWindow(width,height,name_.c_str(),nullptr,nullptr);
         }
         ~GLFWWindowContainer(){
@@ -50,19 +50,14 @@ namespace SC{
 
         void initWindow(const std::string &name, int width, int height);
 
-        void init();
-        //void setCamPose(float x, float y, float z);
-
         void run();
 
         /// Draw ImGUI related
-        virtual void draw_ui();
+        virtual void drawUI();
         /// Draw OpenGL related
-        virtual void draw_gl();
+        virtual void drawGL();
 
-//        void process(GLFWWindowContainer* window);
     protected:
-//        virtual void processInput(GLFWwindow* window);
         // Call Back Functions
         static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
             getInstance().key_callback_impl(window, key, scancode, action, mods);
@@ -89,18 +84,11 @@ namespace SC{
         }
         virtual void error_callback_impl(int error, const char* description);
 
-        /// The actual processing stuff. Inherit this and while running process this function will be called in right time.
-        virtual void process_impl(){};
-
         static GUI_base *ptrInstance;
-//        glUtil::Camera *glCam;
-//        glm::vec3 camPose, camUp;
-        bool mouseInit, mousePressedRight;
-        float mouseXpre, mouseYpre;
-        double deltaFrameTime, lastFrameTime, currentFrameTime;
-        float yaw, pitch, roll, fov, fovMax, camSpeed;
-    private:
         GLFWWindowContainer *window_;
+    private:
         std::string glsl_version;
+
+        void init();
     };
 }

@@ -5,8 +5,9 @@
 using namespace SC;
 
 GUI_base *GUI_base::ptrInstance;
-GUI_base::GUI_base(){
+GUI_base::GUI_base():window_(nullptr){
     ptrInstance=this;
+    init();
 }
 GUI_base::~GUI_base(){
     // Cleanup
@@ -59,8 +60,8 @@ void GUI_base::initWindow(const std::string& name, int width, int height) {
     glfwMakeContextCurrent(window_->window);
     glfwSetKeyCallback(window_->window, key_callback);
     glfwSetMouseButtonCallback(window_->window, mouse_button_callback);
-    glfwSetCursorPosCallback(window_->window, SC::GUI_base::mouse_callback);
-    glfwSetScrollCallback(window_->window, SC::GUI_base::scroll_callback);
+    glfwSetCursorPosCallback(window_->window, mouse_callback);
+    glfwSetScrollCallback(window_->window, scroll_callback);
     glfwSetFramebufferSizeCallback(window_->window, framebuffer_size_callback);
 
     // Get runtime width and height. In Retina monitor, the resolution will change
@@ -125,7 +126,7 @@ void GUI_base::run() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        draw_ui();
+        drawUI();
 
         ImGui::Render();
 
@@ -135,16 +136,16 @@ void GUI_base::run() {
         glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        draw_gl();
+        drawGL();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window_->window);
     }
 }
 
-void GUI_base::draw_gl() {}
+void GUI_base::drawGL() {}
 
-void GUI_base::draw_ui() {
+void GUI_base::drawUI() {
     ImGui::ShowDemoWindow();
 }
 
@@ -170,23 +171,7 @@ void GUI_base::framebuffer_size_callback_impl(GLFWwindow* window, int width, int
 }
 
 inline void GUI_base::scroll_callback_impl(GLFWwindow* window, double xoffset, double yoffset){
-//    glCam->ProcessMouseScroll(yoffset, deltaFrameTime);
 }
 
 inline void GUI_base::mouse_callback_impl(GLFWwindow* window, double xpos, double ypos){
-    if(!mousePressedRight) return;
-    if(!mouseInit)
-    {
-        mouseXpre = xpos;
-        mouseYpre = ypos;
-        mouseInit = !mouseInit;
-        return;
-    }
-
-    float xoffset = xpos - mouseXpre;
-    float yoffset = mouseYpre - ypos; //
-    mouseXpre = xpos;
-    mouseYpre = ypos;
-
-//    glCam->ProcessMouseMovement(xoffset, yoffset);
 }

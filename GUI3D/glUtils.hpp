@@ -13,9 +13,7 @@
 #include <string>
 #include <iostream>
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <stb_image.h>
+//#include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -30,7 +28,7 @@ namespace glUtil {
         // faces should have 6 paths: right, left, front, back, top, bottom
         static unsigned int loadCubemap(const std::vector<std::string> &faces);
         uint loadTexture(char const * path);
-        void save_screen( const char *spath );
+        static void save_screen( const char *spath );
         
     };
     

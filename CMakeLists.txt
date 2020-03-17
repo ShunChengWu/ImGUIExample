@@ -8,4 +8,4 @@ ADD_SUBDIRECTORY(GUI)
 ADD_SUBDIRECTORY(GUI3D)
 
 add_executable(exe exe.cpp )
-target_link_libraries(exe PUBLIC GUI)
+target_link_libraries(exe PUBLIC GUI GUI3D)

@@ -30,7 +30,6 @@ using namespace gl;
 #include <sstream>
 #include <iostream>
 #include <typeinfo>
-#include <OpenGL/OpenGL.h>
 
 namespace glUtil{
     class Shader
